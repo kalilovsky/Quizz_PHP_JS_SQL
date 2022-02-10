@@ -102,7 +102,7 @@ switch ($bddState){
         }
 
         //ecriture de la données des 4 réponses en incluant l'id de la question corréspondantes aux réponses
-        $sqlQuery = 'INSERT INTO REPONSES(answer_txt,id_qst) VALUES (:ans_txt,:id_qt)';
+        $sqlQuery = 'INSERT INTO REPONSES(answer_number,answer_txt,id_qst) VALUES (:ans_num,:ans_txt,:id_qt)';
         $insertData = $db->prepare($sqlQuery);
         foreach($tableauDesQst as $tableau){
             //Réxupération de l'id de la question liés aux réponses
@@ -115,18 +115,22 @@ switch ($bddState){
             //echo(count($sqlResult3));
 
             $insertData->execute([
+                'ans_num'=>"r1",
                 'ans_txt'=>$tableau["r1"],
                 'id_qt'=>$sqlResult3[0]
             ]);
             $insertData->execute([
+                'ans_num'=>"r2",
                 'ans_txt'=>$tableau["r2"],
                 'id_qt'=>$sqlResult3[0]
             ]);
             $insertData->execute([
+                'ans_num'=>"r3",
                 'ans_txt'=>$tableau["r3"],
                 'id_qt'=>$sqlResult3[0]
             ]);
             $insertData->execute([
+                'ans_num'=>"r4",
                 'ans_txt'=>$tableau["r4"],
                 'id_qt'=>$sqlResult3[0]
             ]);

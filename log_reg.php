@@ -30,6 +30,7 @@ function loginFunction($dataBase){
     // session_destroy();
   //  print_r($_SESSION);
    // print_r($resultSql);
+    header("location:home.php");
     } else {
         $error[]= "Mauvais pseudo ou mots de passe.";
     }
@@ -57,9 +58,11 @@ function registrationFunction($dataBase){
     $querySql->execute();
     // $tt = $querySql->errorInfo();
     // print_r($tt);
+    header("location:home.php");
+    exit();
     } else {
         //si il y a des row lors du test c'est que l'utilisateur existe déja
-        //$error[] = "Utilisateur existe déja!";
+        $error[] = "Utilisateur existe déja!";
     }
 
 }

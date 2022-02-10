@@ -28,6 +28,7 @@
 <body>
     <div class="container">
         <div class="pageLogin" id="pageLogReg">
+               
             <form class="login" id="pageLogin" method="post" action="">
                 <?php 
                 if (isset($error)){

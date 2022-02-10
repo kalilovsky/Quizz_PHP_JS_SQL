@@ -40,89 +40,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         adminScoreCreate("rien",true,scoreStatTmp[0]);
 
     }
-    //Cette fonction est trés importante car elle permet de créer la base de données 
-    //les tables et les enregistrement par défaut, cela va permettre de faire fonctionner
-    //le quizz dans n'importe qu'elle navigateur et PC
-    function checkBDD (nomBDD){
-        let request = window.indexedDB.open(nomBDD);
-        request.onsuccess = function(event){
-            console.log("Base de donnés et 3 table avec leur données prêtes à l'emploi.")
-        };
-        request.onerror = function(event){
-            alert(event.target.error);
-        };
-        //dans le cas ou il ne trouve pas la base de données il va détécter que c'est un upgrade
-        //dans ce cas il va créer les table user themes et score par défaut
-        request.onupgradeneeded = function(event){
-           //alert("upgrade");
-            let db = event.target.result;
-            defaultQuestionsInject(db,false);
-            adminUserCreate(db);
-            //création uniquement de la table userscore car j'avais des erreurs que je n'ai pas
-            // pu résoudre
-            adminScoreCreate(db,false,scoreStatTmp[0]);
-           
-        };
-    }
-    function adminScoreCreate(dataBase,scoreInject,tableScore){
-        if (scoreInject==false){
-         //Création de la table user stat avec le pseudo comme key
-         let objectStoreUserStat = dataBase.createObjectStore("userstat", {keyPath: 'date'});
-         objectStoreUserStat.createIndex("pseudo", "pseudo", { unique: false });
-        } else if (scoreInject==true){
-            //Ouverture de la base de données
-            let request = window.indexedDB.open(dbName);
-            request.onsuccess = function(event){
-                let db = event.target.result;
-                let transaction = db.transaction("userstat","readwrite");
-                let objectStore = transaction.objectStore("userstat");
-                let request = objectStore.add(tableScore);
-                console.log("Stat du User par défaut injécté dans la base de donnée")
-            
-            };
-        }
-    }
-    function defaultQuestionsInject(dataBase,inject){
-        if (inject==false){
-            //création de l'objectstore qui corréspond à la table des questions
-            let objectStore = dataBase.createObjectStore("themeSave", {keyPath: 'q1'});
-            objectStore.createIndex("themes", "themes", { unique: false });
-        } else if(inject==true){
-            //Ouverture de la base de données
-            let request = window.indexedDB.open(dbName);
-            request.onsuccess = function(event){
-                let db = event.target.result;
-                let transaction = db.transaction("themeSave","readwrite");
-                // Stocker les valeurs dans le nouvel objet de stockage.
-                // et création de la transaction
-                let objectStore = transaction.objectStore("themeSave");
-                let request
-                //rajout des questions par themes
-                for (i in themeSaveParLot){
-                    request = objectStore.add(themeSaveParLot[i]);
-                }
-                console.log("Question injécté dans la base de donnée")
-            
-            };
-           
-        }
-    }
-    function adminUserCreate(dataBase){
-        //Création de la table users avec le pseudo en tant que Key
-        let objectStoreUser = dataBase.createObjectStore("users", {keyPath: 'pseudo'});
-        //Création d'un Index Email unique pour chaque enregistrement
-        //objectStoreUser.createIndex("email", "email", { unique: true });
-        //Quand il fini de créer l'objectstore il effectue les opérations suivantes
-        objectStoreUser.transaction.oncomplete = function(event) {
-            // Stocker les valeurs dans le nouvel objet de stockage.
-            // et création de la transaction
-            let customerObjectStoreUser = dataBase.transaction("users", "readwrite").objectStore("users");
-            customerObjectStoreUser.add(userTmp[0]);
-            console.log("User par défaut injécté dans la base de donnée")
-            //création de la table du score pour sauvegarder le score des users
-            
-        };
-    }
+    
     function loadQuestions (dBase){
         let request = window.indexedDB.open(dBase);
         let themesSelected   = document.getElementById('themeSelect').value
@@ -217,63 +135,32 @@ document.addEventListener('DOMContentLoaded', ()=>{
     //et d'enlever les question déja posées, et de verfier les bonnes réponses
     //et de sauvegarder les réponses donné la date le score .... dans le tableau de
     // l'utilisateur        
-    function loadQuestionForQuizz(thmTxt,addQtoDB){
-        let request = window.indexedDB.open(addQtoDB);
+    function loadQuestionForQuizz(thmTxt,url){
+        
         currentQ =0;
         sessionScore = 0;
         dateGameSessionStart = new Date();
-            
-        request.onerror = function(event) {
-            // Gestion des erreurs.
-          };
-        request.onsuccess = function(event){
-            
-            let db = event.target.result;
-            let transaction = db.transaction("themeSave");
-            let objectStore = transaction.objectStore("themeSave");
-            let test1 = objectStore.index("themes");
-            let test = test1.getAll(thmTxt);
-            test.onsuccess = function(){
-                if (test.result){
-                    themeSaveTemp = test.result;
-                    hideAllBoxesShowQuizz();
-                    showQuestions(themeSaveTemp) ;                   
-                } else {
-                    alert("Cet utilisateur n'existe pas, Veuillez réessayer.")
-                }
-            }
-            test.onerror = function() {
+        data = new FormData()
+        data.append("themeChoice",thmTxt);
+        
+        url = "themes.php?themeChoice="+thmTxt;
+        console.log(url);
+        fetch(url)
+        .then(answer=>answer.json())
+        .then(answer=>{
+            hideAllBoxesShowQuizz();
+            themeSaveTemp = answer;
+            console.log(themeSaveTemp);
+            showQuestions(themeSaveTemp) ;
+        } )
+
+        // console.log(themeSaveTemp);
+        // hideAllBoxesShowQuizz();
+        // showQuestions(themeSaveTemp) ;                   
                 
-                alert("MDP ou Pseudo réssayer!!")
-            }
-           
-            };
             
     }
-    function loadOldScoreFromBD(addQtoDB,userPseudo){
-        let request = window.indexedDB.open(addQtoDB);
-        request.onerror = function(event) {
-            // Gestion des erreurs.
-          };
-        request.onsuccess = function(event){
-            let db = event.target.result;
-            let transaction = db.transaction("userstat");
-            let objectStore = transaction.objectStore("userstat");
-            let test1 = objectStore.index("pseudo");
-            let test = test1.getAll(userPseudo);
-            test.onsuccess = function(){
-                if (test.result){
-                scoreStatTmp = test.result;                                   
-                } else {
-                    
-                }
-            }
-            test.onerror = function() {
-                
-                
-            }
-        }
-    }
+    
     function hideAllBoxesShowQuizz(){
        document.getElementById("allBoxes").classList.toggle("hidden");
        document.getElementById("quizz").classList.toggle("hidden");
@@ -284,146 +171,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
         
         oldQRandomNbr= qRandomNbr;
         pCurrentQ.innerHTML = (currentQ+1) +"/"+(qPerGame+1)
-        txtOptBtn[0].innerHTML = tableTheme[qRandomNbr].q1;
-        txtOptBtn[1].innerHTML = tableTheme[qRandomNbr].q2;
-        txtOptBtn[2].innerHTML = tableTheme[qRandomNbr].q3;
-        txtOptBtn[3].innerHTML = tableTheme[qRandomNbr].q4;
-        txtOptBtn[4].innerHTML = tableTheme[qRandomNbr].q5;
+        txtOptBtn[0].innerHTML = tableTheme[qRandomNbr].q;
+        txtOptBtn[1].innerHTML = tableTheme[qRandomNbr].r1;
+        txtOptBtn[2].innerHTML = tableTheme[qRandomNbr].r2;
+        txtOptBtn[3].innerHTML = tableTheme[qRandomNbr].r3;
+        txtOptBtn[4].innerHTML = tableTheme[qRandomNbr].r4;
             
         qRandomNbr = Math.floor(Math.random()*(tableTheme.length-1));   
        
     }    
-    function addAllQtoDB(){
-        let themesTxtTmp= themesTxt.split("-/");
-        let q1TxtTmp= q1Txt.split("-/");
-        let q2TxtTmp= q2Txt.split("-/");
-        let q3TxtTmp= q3Txt.split("-/");
-        let q4TxtTmp= q4Txt.split("-/");
-        let q5TxtTmp= q5Txt.split("-/");
-        let repQTmp= repTxt.split("-/");
-        
-        for(i=0; i<themesTxtTmp.length;i++){
-            if (i!=0){
-            themeSaveParLot.push({themes: "" , q1:"",q2:"",q3:"",q4:"",q5:"",repQ:"" })
-            }
-            themeSaveParLot[i]["themes"] = themesTxtTmp[i];
-            themeSaveParLot[i]["q1"] =q1TxtTmp[i];
-            themeSaveParLot[i]["q2"] =q2TxtTmp[i];
-            themeSaveParLot[i]["q3"] =q3TxtTmp[i];
-            themeSaveParLot[i]['q4'] =q4TxtTmp[i];
-            themeSaveParLot[i]["q5"] =q5TxtTmp[i];
-            themeSaveParLot[i]["repQ"] =repQTmp[i];
-
-        }
-    }
-    function addQtoDB(dbNameLogin){
-        let request = window.indexedDB.open(dbNameLogin);
-        request.onsuccess = function(event){
-            let db = event.target.result;
-            let transaction = db.transaction("themeSave3","readwrite");
-            var objectStore = transaction.objectStore("themeSave3");
-            var request = objectStore.add(themeSave);
-            request.onsuccess = function(event) {
-                alert("Question ajouté")
-            };
-            request.onerror = function(event) {
-                alert("Utilisateur déja présent, veuillez réessayer.")
-            }
-        }
-    }
-    function accountConnection(){
-        
-        if (connected != false){
-            pageDash.classList.toggle("getOut")
-            pageLogReg.classList.toggle("getOut")
-            let userInfoP = document.getElementsByClassName("myAccountInfo");
-            userInfoP[0].innerHTML = "Nom: " +user[0].nom
-            userInfoP[1].innerHTML = "Prénom: "+user[0].prenom
-            userInfoP[2].innerHTML = "Age : "+user[0].age+"ans"
-            userInfoP[3].innerHTML = "Email : "+user[0].email
-            userInfoP[4].innerHTML = "Pseudo : "+user[0].pseudo
-            userInfoP[5].innerHTML = "Password : "+user[0].mdp
-            userInfoP[6].innerHTML = "Historiques"  
-            //Lors du clique pour afficher l'historique verrifier que l'on est pas entrain de jouer
-            //et vérifier quel fenetre est active
-            userInfoP[6].onclick = function(){
-                
-                if (!document.getElementById("quizz").classList.contains("hidden")){
-                    alert("Veuillez finir votre activités avant de voir les ancien résultats.");
-                } else if (!document.getElementById("pageResultat").classList.contains("hidden")) {
-                    
-                    pageResultatShow("scoreAllHide");
-                }else if (!document.getElementById("allBoxes").classList.contains("hidden")){
-                    document.getElementById("allBoxes").classList.toggle("hidden");
-                    pageResultatShow("scoreAll");
-                }
-            }
-            loadOldScoreFromBD(dbName,user[0].pseudo);  
-                              
-        }else {
-
-        }
-    }
-    function login (dbNameLogin){
-        let pseudoLoginValue = document.getElementById("pseudoLogin").value
-        let mdpLoginValue = document.getElementById("mdpLogin").value
-        let request = window.indexedDB.open(dbNameLogin);
-       // connected=true
-       // accountConnection()
-            
-        request.onerror = function(event) {
-            // Gestion des erreurs.
-          };
-        request.onsuccess = function(event){
-            
-            let db = event.target.result;
-            let transaction = db.transaction("users");
-            let objectStore = transaction.objectStore("users");
-            let test = objectStore.get(pseudoLoginValue);
-            test.onsuccess = function(){
-                if (test.result){
-                    if (test.result.mdp=== mdpLoginValue){
-                       
-                        user[0].nom = test.result.nom;
-                        user[0].prenom = test.result.prenom;
-                        user[0].age = test.result.age;
-                        user[0].email = test.result.email;
-                        user[0].pseudo = test.result.pseudo;
-                        user[0].mdp = test.result.mdp;
-                        connected =true;
-                        accountConnection()
-                    } else {
-                        alert("Mot de passe erroné veuillez réessayer.")
-                    }
-                } else {
-                    alert("Cet utilisateur n'existe pas, Veuillez réessayer.")
-                }
-            }
-            test.onerror = function() {
-                
-                alert("MDP ou Pseudo réssayer!!")
-            }
-           
-        };
-        
-    }
-    function ajouterUser(dbNameLogin){
-        let request = window.indexedDB.open(dbNameLogin);
-        request.onsuccess = function(event){
-            let db = event.target.result;
-            let transaction = db.transaction("users","readwrite");
-            let objectStore = transaction.objectStore("users");
-            let request = objectStore.add(user);
-            request.onsuccess = function(event) {
-                console.log("utilisateur ajouté")
-                connected =true;
-                accountConnection();
-            }
-            request.onerror = function(event) {
-                alert("Utilisateur déja présent, veuillez réessayer.")
-            }
-        };
-    }
+    
     //afficher les résultats du jeux en cours ou des sessions précédentes.
     function pageResultatShow(typeOfShow){
         //Dans le cas d'un appel pour afficher le score de la session en cours 
@@ -506,7 +263,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     //gestion des evenement de click sur les bouton
     Array.from(document.getElementsByClassName("button")).forEach(e=>{
         e.addEventListener("click", ()=>{
-            console.log(e.dataset.info);
+           
             switch (e.dataset.info){
                 //bouton Connect
                 case "btnConnectSubmit":
@@ -524,7 +281,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
                     user.email = document.getElementById('mailRegister').value;
                     user.mdp = document.getElementById('mdpRegister').value;
                     
-                    ajouterUser(dbName);
+                   
                     break;
                 case "btnConnectR":
                     loginForm.classList.toggle('hidden');
@@ -559,20 +316,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
                     loadQuestions(dbName);
                     break;
                 case "themeBoxTech":
-                    loadQuestionForQuizz("Technologie",dbName);
+                    loadQuestionForQuizz("Technologie",e.baseURI);
+                    
                     break;
                 case "themeBoxCinema":
-                    loadQuestionForQuizz("Cinéma",dbName);
+                    loadQuestionForQuizz("Cinéma",e.baseURI);
                     break;
                 case "themeBoxGaming":
-                    loadQuestionForQuizz("Gaming",dbName);
+                    loadQuestionForQuizz("Gaming",e.baseURI);
                     break;
                 case "themeBoxAnimes":
-                    loadQuestionForQuizz("Animés",dbName);
+                    loadQuestionForQuizz("Animés",e.baseURI);
                     break;
                 case "btnSubmitAnswer":
                     if (currentQ <= qPerGame){
                         //vérifier qu'il y'a une réponse qui déja choisi
+                        //Ensuite vérifier la question actuelle pour savoir si le jeu est fini ou pas encore
                         if( checkAnswerAndSave()!= false){
                             if (currentQ!=qPerGame){
                                 currentQ++;
@@ -583,8 +342,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
                                     document.getElementById("quizz").classList.toggle("hidden");
                                     
                                     //Sauvegarder le score dans la base de données
-                                    adminScoreCreate("rien",true,scoreStat);
-                                    pageResultatShow("scoreSession");
+                                    //adminScoreCreate("rien",true,scoreStat);
+                                    //pageResultatShow("scoreSession");
                                 }
                         } else {
                             alert("Veuillez Choisir Une Réponse SVP")
@@ -596,23 +355,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
                         document.getElementById("quizz").classList.toggle("hidden");
                     }
                     break;
-                case "disconnect":
-                    pageDash.classList.toggle("getOut");
-                    if (!document.getElementById("resultPage").classList.contains("hidden")){
-                        document.getElementById("resultPage").classList.toggle("hidden");
-                    }
-                    if (document.getElementById("allBoxes").classList.contains("hidden")){
-                        document.getElementById("allBoxes").classList.toggle("hidden");
-                    }
-                    if (!document.getElementById("quizz").classList.contains("hidden")){
-                        document.getElementById("quizz").classList.toggle("hidden");
-                    }
-                    if (!document.getElementById("pageResultat").classList.contains("hidden")){
-                        document.getElementById("pageResultat").classList.toggle("hidden");
-                    }
-                    pageLogReg.classList.toggle("getOut");
-                    connected =false;
-                    break;
+                
                 case "accountP":
                     document.getElementById('myAccount').classList.toggle("hidden");
                     break;
@@ -621,6 +364,35 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
             }
         })
+    })
+
+    document.getElementById("pageRegister").addEventListener("submit", function(e){
+        //Annule tous les autres evenement 
+        e.preventDefault();
+        //initialiser la form dans l'element du clique
+        const form = e.currentTarget;
+        //avoir l'url ou la clique s'est produit
+        const url = form.action;
+        //création de l'objet FormData qui contiendra les data contenus dans les FORM
+        const formData1 = new FormData(form);
+        //et y rajouter l'information register qui sera vérifier sur le post du PHP
+        formData1.append("register","Inscription");
+        //création de l'objet qui sera passé en argument dans la procédure Fetch
+        const options = {
+            method : "post",
+            body : formData1,
+        }
+        //Envoie de la données
+        fetch(url,options)
+        //il n'y pas encore de gestion d'erreur mais cela viendra ;)
+            
+            .then(data=>{
+               console.log(data.url);
+               window.location.replace(data.url);
+                
+            });
+        
+        
     })
     
 });
